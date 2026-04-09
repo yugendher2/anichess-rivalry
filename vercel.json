@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/proxy/match-history",
+      "destination": "https://apiv2.pvp.anichess.com/player/match-history-pagination/:wallet"
+    }
+  ]
+}

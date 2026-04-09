@@ -23,13 +23,31 @@ async function startServer() {
 
     try {
       const url = `https://apiv2.pvp.anichess.com/player/match-history-pagination/${wallet}?offset=${offset || 0}&limit=${limit || 50}`;
-      const response = await axios.get(url);
+      console.log(`Proxying request to: ${url}`);
+      
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+          'Origin': 'https://anichess.com',
+          'Referer': 'https://anichess.com/'
+        },
+        timeout: 10000 // 10s timeout
+      });
+      
       res.json(response.data);
     } catch (error: any) {
-      console.error('Proxy error:', error.message);
+      console.error('Proxy error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      });
+      
       res.status(error.response?.status || 500).json({ 
         error: 'Failed to fetch data from Anichess API',
-        details: error.message 
+        message: error.message,
+        details: error.response?.data || 'No additional details'
       });
     }
   });
