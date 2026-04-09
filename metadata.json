@@ -1,0 +1,5 @@
+{
+  "name": "Anichess Rivalry Stats",
+  "description": "Analyze your match history against specific opponents on Anichess. Track wins, losses, and performance across different game formats.",
+  "requestFramePermissions": []
+}
