@@ -144,16 +144,17 @@ export default function App() {
       setProgress({ current: allMatches.length, total });
 
       while (allMatches.length < total) {
-        offset += limit;
-        const nextResponse = await fetch(`/api/proxy/match-history?wallet=${wallet}&offset=${offset}&limit=${limit}`);
+        const currentOffset = allMatches.length;
+        const nextResponse = await fetch(`/api/proxy/match-history?wallet=${wallet}&offset=${currentOffset}&limit=${limit}`);
         const nextData: MatchHistoryResponse = await nextResponse.json();
         
         if (!nextData.status) break;
         
-        allMatches = [...allMatches, ...nextData.data.matchHistories];
-        setProgress({ current: allMatches.length, total });
+        const newMatches = nextData.data.matchHistories;
+        if (newMatches.length === 0) break;
         
-        if (nextData.data.matchHistories.length === 0) break;
+        allMatches = [...allMatches, ...newMatches];
+        setProgress({ current: allMatches.length, total });
       }
 
       setMatches(allMatches);
@@ -353,8 +354,8 @@ export default function App() {
                   </div>
                   <div className="glass-card px-6 py-4 text-center min-w-[120px] border-emerald-500/20">
                     <p className="text-2xl font-bold text-emerald-500">
-                      {rivalryStats.stats.total > 0 
-                        ? ((rivalryStats.stats.wins / rivalryStats.stats.total) * 100).toFixed(1) 
+                      {(rivalryStats.stats.wins + rivalryStats.stats.losses) > 0 
+                        ? ((rivalryStats.stats.wins / (rivalryStats.stats.wins + rivalryStats.stats.losses)) * 100).toFixed(1) 
                         : 0}%
                     </p>
                     <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Win Rate</p>
