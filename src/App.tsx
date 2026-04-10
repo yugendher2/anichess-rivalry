@@ -24,7 +24,10 @@ import {
   Clock,
   Wand2,
   Ban,
-  LayoutGrid
+  LayoutGrid,
+  Bookmark,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -117,10 +120,43 @@ export default function App() {
   const [matches, setMatches] = useState<MatchHistory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [tempOpponent, setTempOpponent] = useState('');
+  
+  // Address Book State
+  const [addressBook, setAddressBook] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('anichess_address_book');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveAddress, setSaveAddress] = useState('');
 
-  const fetchAllMatches = async (wallet: string) => {
-    if (!wallet || !opponentWallet) return;
+  const saveToAddressBook = () => {
+    if (!saveName || !saveAddress) return;
+    const newBook = { ...addressBook, [saveAddress.toLowerCase().trim()]: saveName.trim() };
+    setAddressBook(newBook);
+    localStorage.setItem('anichess_address_book', JSON.stringify(newBook));
+    setIsSaving(false);
+    setSaveName('');
+    setSaveAddress('');
+  };
+
+  const removeFromAddressBook = (address: string) => {
+    const newBook = { ...addressBook };
+    delete newBook[address.toLowerCase().trim()];
+    setAddressBook(newBook);
+    localStorage.setItem('anichess_address_book', JSON.stringify(newBook));
+  };
+
+  const fetchAllMatches = async (walletInput: string) => {
+    const wallet = walletInput.trim().toLowerCase();
+    const opponent = opponentWallet.trim().toLowerCase();
     
+    if (!wallet || !opponent) return;
+    
+    setMyWallet(wallet);
+    setOpponentWallet(opponent);
+    setTempOpponent(opponent);
     setLoading(true);
     setError(null);
     setMatches([]);
@@ -177,7 +213,7 @@ export default function App() {
     };
 
     const filtered = matches.filter(m => 
-      m.opponents.some(o => o.opponent.wallet_address.toLowerCase() === opponentWallet.toLowerCase())
+      m.opponents.some(o => o.opponent.wallet_address.toLowerCase() === opponentWallet.trim().toLowerCase())
     );
 
     filtered.forEach(m => {
@@ -297,6 +333,117 @@ export default function App() {
                 <div className="flex items-center gap-2"><Activity className="w-4 h-4" /> Deep Analysis</div>
                 <div className="flex items-center gap-2"><Shield className="w-4 h-4" /> Secure Proxy</div>
               </div>
+
+              {/* Address Book Section */}
+              <div className="mt-16 max-w-2xl mx-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                    <Bookmark className="w-4 h-4 text-orange-500" /> Address Book
+                  </h3>
+                  <button 
+                    onClick={() => setIsSaving(true)}
+                    className="text-[10px] font-mono text-orange-500 hover:text-orange-400 flex items-center gap-1 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Add New
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Object.entries(addressBook).map(([address, name]) => (
+                    <div key={address} className="glass-card p-4 flex items-center justify-between group hover:border-orange-500/30 transition-all">
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => {
+                          setMyWallet(address);
+                        }}
+                      >
+                        <p className="text-sm font-bold text-white truncate">{name}</p>
+                        <p className="text-[10px] font-mono text-slate-500 truncate">{address.slice(0, 6)}...{address.slice(-4)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setOpponentWallet(address)}
+                          className="p-2 hover:bg-white/5 rounded-lg text-slate-500 hover:text-orange-500 transition-colors"
+                          title="Set as Opponent"
+                        >
+                          <Target className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => removeFromAddressBook(address)}
+                          className="p-2 hover:bg-white/5 rounded-lg text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {Object.keys(addressBook).length === 0 && (
+                    <div className="col-span-2 py-8 border border-dashed border-white/5 rounded-2xl text-center">
+                      <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">No saved addresses</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Save Address Modal */}
+              <AnimatePresence>
+                {isSaving && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setIsSaving(false)}
+                      className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                    />
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                      className="relative w-full max-w-md glass-card p-8 shadow-2xl"
+                    >
+                      <h3 className="text-xl font-bold text-white mb-6">Save Address</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2 block">Display Name</label>
+                          <input 
+                            type="text"
+                            value={saveName}
+                            onChange={(e) => setSaveName(e.target.value)}
+                            placeholder="e.g. My Main Wallet"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-orange-500/50 focus:ring-0 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2 block">Wallet Address</label>
+                          <input 
+                            type="text"
+                            value={saveAddress}
+                            onChange={(e) => setSaveAddress(e.target.value)}
+                            placeholder="0x..."
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-orange-500/50 focus:ring-0 transition-all"
+                          />
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                          <button 
+                            onClick={() => setIsSaving(false)}
+                            className="flex-1 px-6 py-3 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={saveToAddressBook}
+                            disabled={!saveName || !saveAddress}
+                            className="flex-1 accent-gradient text-white px-6 py-3 rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                          >
+                            Save Entry
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
             </motion.div>
           ) : loading ? (
             <motion.div 
@@ -340,11 +487,37 @@ export default function App() {
                     <ArrowRight className="w-4 h-4 rotate-180" /> Back to Search
                   </button>
                   <h2 className="text-4xl font-bold text-white tracking-tight">Rivalry Report</h2>
-                  <p className="text-slate-400 mt-2 flex items-center gap-2">
-                    <span className="font-mono text-xs bg-white/5 px-2 py-1 rounded">{myWallet.slice(0, 6)}...{myWallet.slice(-4)}</span>
-                    <span className="text-slate-600">vs</span>
-                    <span className="font-mono text-xs bg-orange-500/10 text-orange-400 px-2 py-1 rounded">{opponentWallet.slice(0, 6)}...{opponentWallet.slice(-4)}</span>
-                  </p>
+                  <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <p className="text-slate-400 flex items-center gap-2">
+                      <span className="font-mono text-xs bg-white/5 px-2 py-1 rounded">{myWallet.slice(0, 6)}...{myWallet.slice(-4)}</span>
+                      <span className="text-slate-600">vs</span>
+                    </p>
+                    <div className="relative group">
+                      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 focus-within:border-orange-500/50 transition-all">
+                        <Search className="w-3.5 h-3.5 text-slate-500" />
+                        <input 
+                          type="text"
+                          value={tempOpponent}
+                          onChange={(e) => setTempOpponent(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setOpponentWallet(tempOpponent.trim().toLowerCase());
+                            }
+                          }}
+                          placeholder="Search another opponent..."
+                          className="bg-transparent border-none focus:ring-0 text-xs font-mono text-orange-400 placeholder:text-slate-600 w-48"
+                        />
+                        {tempOpponent.toLowerCase() !== opponentWallet.toLowerCase() && (
+                          <button 
+                            onClick={() => setOpponentWallet(tempOpponent.trim().toLowerCase())}
+                            className="text-[10px] font-bold text-orange-500 hover:text-orange-400 uppercase tracking-tighter"
+                          >
+                            Apply
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="flex gap-4">
