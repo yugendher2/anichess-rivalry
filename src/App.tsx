@@ -123,29 +123,58 @@ export default function App() {
   const [tempOpponent, setTempOpponent] = useState('');
   
   // Address Book State
-  const [addressBook, setAddressBook] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem('anichess_address_book');
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [addressBook, setAddressBook] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveName, setSaveName] = useState('');
   const [saveAddress, setSaveAddress] = useState('');
 
-  const saveToAddressBook = () => {
+  // Fetch address book on mount
+  React.useEffect(() => {
+    fetch('/api/address-book')
+      .then(res => res.json())
+      .then(data => setAddressBook(data))
+      .catch(err => console.error('Failed to fetch address book:', err));
+  }, []);
+
+  const saveToAddressBook = async () => {
     if (!saveName || !saveAddress) return;
     const newBook = { ...addressBook, [saveAddress.toLowerCase().trim()]: saveName.trim() };
-    setAddressBook(newBook);
-    localStorage.setItem('anichess_address_book', JSON.stringify(newBook));
-    setIsSaving(false);
-    setSaveName('');
-    setSaveAddress('');
+    
+    try {
+      const response = await fetch('/api/address-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBook)
+      });
+      
+      if (response.ok) {
+        setAddressBook(newBook);
+        setIsSaving(false);
+        setSaveName('');
+        setSaveAddress('');
+      }
+    } catch (err) {
+      console.error('Failed to save address book:', err);
+    }
   };
 
-  const removeFromAddressBook = (address: string) => {
+  const removeFromAddressBook = async (address: string) => {
     const newBook = { ...addressBook };
     delete newBook[address.toLowerCase().trim()];
-    setAddressBook(newBook);
-    localStorage.setItem('anichess_address_book', JSON.stringify(newBook));
+    
+    try {
+      const response = await fetch('/api/address-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBook)
+      });
+      
+      if (response.ok) {
+        setAddressBook(newBook);
+      }
+    } catch (err) {
+      console.error('Failed to remove from address book:', err);
+    }
   };
 
   const fetchAllMatches = async (walletInput: string) => {

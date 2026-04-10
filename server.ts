@@ -3,15 +3,36 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
+import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ADDRESS_BOOK_PATH = path.join(process.cwd(), 'address-book.json');
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  // Address Book API
+  app.get('/api/address-book', async (req, res) => {
+    try {
+      const data = await fs.readFile(ADDRESS_BOOK_PATH, 'utf-8');
+      res.json(JSON.parse(data));
+    } catch (error) {
+      res.json({});
+    }
+  });
+
+  app.post('/api/address-book', async (req, res) => {
+    try {
+      await fs.writeFile(ADDRESS_BOOK_PATH, JSON.stringify(req.body, null, 2));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to save address book' });
+    }
+  });
 
   // API Proxy for Anichess
   app.get('/api/proxy/match-history', async (req, res) => {
